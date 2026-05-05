@@ -36,13 +36,6 @@ async function main() {
 
   // declare and bind queue
   const userName = await clientWelcome();
-  const [channel, queue] = await declareAndBind(
-    conn,
-    ExchangePerilDirect,
-    `${PauseKey}.${userName}`,
-    PauseKey,
-    SimpleQueueType.Transient,
-  );
 
   const gameState = new GameState(userName);
 

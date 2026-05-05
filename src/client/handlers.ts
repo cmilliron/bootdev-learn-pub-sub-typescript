@@ -2,16 +2,12 @@ import {
   GameState,
   type PlayingState,
 } from "../internal/gamelogic/gamestate.js";
+import { handlePause } from "../internal/gamelogic/pause.js";
 
 export function handlerPause(gs: GameState): (ps: PlayingState) => void {
   console.log("handler called");
-  return (ps) => {
-    console.log(ps);
-    if (ps.isPaused) {
-      gs.pauseGame();
-    } else {
-      gs.resumeGame();
-    }
-    console.log("> ");
+  return (ps: PlayingState) => {
+    handlePause(gs, ps);
+    process.stdout.write("> ");
   };
 }

@@ -21,10 +21,14 @@ export async function subscribeJSON<T>(
       console.log("no message");
       return;
     }
-    const fromBuffer = message.content.toString();
-    // console.log(fromBuffer);
-    const res = JSON.parse(fromBuffer);
-    // console.log(res);
+    let res: T;
+    try {
+      const fromBuffer = message.content.toString();
+      res = JSON.parse(fromBuffer);
+    } catch (error) {
+      console.error("Could not unmarshal data: ", error);
+      return;
+    }
     handler(res);
     channel.ack(message);
   });
