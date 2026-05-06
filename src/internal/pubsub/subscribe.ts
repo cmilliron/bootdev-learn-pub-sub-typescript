@@ -13,7 +13,7 @@ export async function subscribeJSON<T>(
   queueName: string,
   key: string,
   queueType: SimpleQueueType,
-  handler: (data: T) => AckType,
+  handler: (data: T) => Promise<AckType> | AckType,
 ): Promise<void> {
   const [channel, queue] = await declareAndBind(
     conn,
@@ -22,23 +22,26 @@ export async function subscribeJSON<T>(
     key,
     queueType,
   );
-  await channel.consume(queue.queue, (message: amqp.ConsumeMessage | null) => {
-    if (!message) {
-      console.log("no message");
-      return;
-    }
-    let res: T;
-    try {
-      const fromBuffer = message.content.toString();
-      res = JSON.parse(fromBuffer);
-    } catch (error) {
-      console.error("Could not unmarshal data: ", error);
-      return;
-    }
-    const result = handler(res);
-    processResult(channel, message, result);
-    // channel.ack(message);
-  });
+  await channel.consume(
+    queue.queue,
+    async (message: amqp.ConsumeMessage | null) => {
+      if (!message) {
+        console.log("no message");
+        return;
+      }
+      let res: T;
+      try {
+        const fromBuffer = message.content.toString();
+        res = JSON.parse(fromBuffer);
+      } catch (error) {
+        console.error("Could not unmarshal data: ", error);
+        return;
+      }
+      const result = await handler(res);
+      processResult(channel, message, result);
+      // channel.ack(message);
+    },
+  );
 }
 
 function processResult(
@@ -48,7 +51,7 @@ function processResult(
 ) {
   switch (ack) {
     case AckType.Ack:
-      console.log(`Acknowledging ${message}`);
+      // console.log(`Acknowledging ${message}`);
       ch.ack(message);
       break;
     case AckType.NackRequeue:
@@ -56,7 +59,7 @@ function processResult(
       ch.nack(message, false, true);
       break;
     case AckType.NackDiscard:
-      console.log(`Nack and Discard ${message}`);
+      // console.log(`Nack and Discard ${message}`);
       ch.nack(message, false, false);
       break;
 
