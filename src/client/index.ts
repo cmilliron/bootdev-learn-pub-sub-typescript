@@ -3,6 +3,7 @@ import {
   clientWelcome,
   commandStatus,
   getInput,
+  getMaliciousLog,
   printClientHelp,
   printQuit,
 } from "../internal/gamelogic/gamelogic.js";
@@ -18,11 +19,16 @@ import {
 import { GameState } from "../internal/gamelogic/gamestate.js";
 import { commandSpawn } from "../internal/gamelogic/spawn.js";
 import { commandMove } from "../internal/gamelogic/move.js";
-import { subscribeJSON } from "../internal/pubsub/subscribe.js";
+import {
+  subscribeJSON,
+  subscribeMsgPack,
+} from "../internal/pubsub/subscribe.js";
 import { handlerMove, handlerPause, handlerWar } from "./handlers.js";
 import { publishJSON, publishMsgPack } from "../internal/pubsub/publish.js";
 import { compileFunction } from "vm";
-import type { GameLog } from "../internal/gamelogic/logs.js";
+import { writeLog, type GameLog } from "../internal/gamelogic/logs.js";
+import { decode } from "@msgpack/msgpack";
+import { deserializeMsgPack } from "../internal/pubsub/helper.js";
 
 async function main() {
   console.log("Starting Peril client...");
@@ -121,7 +127,18 @@ async function main() {
         break;
 
       case "spam":
-        console.log("Spamming not allowed yet!");
+        // console.log("Spamming not allowed yet!");
+        if (input.length < 2) {
+          console.log("no spam number");
+          break;
+        }
+        const spamNumber = parseInt(input[1] as string);
+        if (spamNumber > 0) {
+          for (let i = 0; i < spamNumber; i++) {
+            const spamLog = getMaliciousLog();
+            await publishGameLog(publishConfirmChannel, userName, spamLog);
+          }
+        }
         break;
 
       case "quit":

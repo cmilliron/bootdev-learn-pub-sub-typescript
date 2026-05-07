@@ -9,6 +9,8 @@ import {
 import type { PlayingState } from "../internal/gamelogic/gamestate.js";
 import { getInput, printServerHelp } from "../internal/gamelogic/gamelogic.js";
 import { declareAndBind, SimpleQueueType } from "../internal/pubsub/consume.js";
+import { subscribeMsgPack } from "../internal/pubsub/subscribe.js";
+import { handlerLog } from "./handlers.js";
 
 async function main() {
   console.log("Starting Peril server...");
@@ -36,12 +38,13 @@ async function main() {
 
   const publishCH = await conn.createConfirmChannel();
 
-  await declareAndBind(
+  await subscribeMsgPack(
     conn,
     ExchangePerilTopic,
     GameLogSlug,
     `${GameLogSlug}.*`,
     SimpleQueueType.Durable,
+    handlerLog(),
   );
 
   try {
