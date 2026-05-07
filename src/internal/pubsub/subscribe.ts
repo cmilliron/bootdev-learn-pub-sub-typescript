@@ -51,15 +51,12 @@ function processResult(
 ) {
   switch (ack) {
     case AckType.Ack:
-      // console.log(`Acknowledging ${message}`);
       ch.ack(message);
       break;
     case AckType.NackRequeue:
-      console.log(`Nack and Requeue ${message}`);
       ch.nack(message, false, true);
       break;
     case AckType.NackDiscard:
-      // console.log(`Nack and Discard ${message}`);
       ch.nack(message, false, false);
       break;
 

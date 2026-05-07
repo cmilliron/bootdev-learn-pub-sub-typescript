@@ -10,12 +10,13 @@ import {
 } from "../internal/gamelogic/gamedata.js";
 import { AckType } from "../internal/pubsub/subscribe.js";
 import type { ConfirmChannel } from "amqplib";
-import { publishJSON } from "../internal/pubsub/publish.js";
+import { publishJSON, publishMsgPack } from "../internal/pubsub/publish.js";
 import {
   ExchangePerilTopic,
   WarRecognitionsPrefix,
 } from "../internal/routing/routing.js";
 import { handleWar, WarOutcome } from "../internal/gamelogic/war.js";
+import { publishGameLog } from "./index.js";
 
 export function handlerPause(gs: GameState): (ps: PlayingState) => AckType {
   // console.log("handler called");
@@ -74,10 +75,11 @@ export function handlerMove(
   };
 }
 
-export function handlerWar(gs: GameState) {
+export function handlerWar(gs: GameState, confirmChannel: ConfirmChannel) {
   return async (rw: RecognitionOfWar): Promise<AckType> => {
     const warResult = handleWar(gs, rw);
     let msg: AckType;
+    let msgLog: string = "";
     switch (warResult.result) {
       case WarOutcome.NotInvolved:
         msg = AckType.NackRequeue;
@@ -88,17 +90,36 @@ export function handlerWar(gs: GameState) {
         break;
 
       case WarOutcome.OpponentWon:
+        msgLog = `${warResult.winner} won a war against ${warResult.loser}`;
+        msg = AckType.NackRequeue;
+        break;
+
       case WarOutcome.YouWon:
+        msgLog = `${warResult.winner} won a war against ${warResult.loser}`;
+        msg = AckType.Ack;
+        break;
+
       case WarOutcome.Draw:
+        msgLog = `A war between ${warResult.attacker} and ${warResult.defender} resulted in a draw`;
         msg = AckType.Ack;
         break;
 
       default:
         console.log("You must have really screwed up");
+        msgLog = "";
         msg = AckType.NackDiscard;
         break;
     }
-    console.log("war hander: ", msg);
+    if (msgLog) {
+      try {
+        console.log("log: ", msgLog);
+        await publishGameLog(confirmChannel, gs.getUsername(), msgLog);
+        msg = AckType.Ack;
+      } catch (error) {
+        msg = AckType.NackRequeue;
+        console.error("There was a logging error");
+      }
+    }
     process.stdout.write("> ");
     return msg;
   };
