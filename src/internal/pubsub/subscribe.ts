@@ -27,7 +27,7 @@ export async function subscribe<T>(
     queueType,
   );
 
-  await channel.prefetch(1);
+  await channel.prefetch(10);
   await channel.consume(
     queue.queue,
     async (message: amqp.ConsumeMessage | null) => {

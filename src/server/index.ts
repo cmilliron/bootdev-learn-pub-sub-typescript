@@ -16,7 +16,6 @@ async function main() {
   console.log("Starting Peril server...");
   const rabbitConnString = "amqp://guest:guest@localhost:5672/";
   const conn = await amqp.connect(rabbitConnString);
-  printServerHelp();
 
   console.log("Started Peril server on port 5672...");
   ["SIGINT", "SIGTERM"].forEach((signal) =>
@@ -32,12 +31,6 @@ async function main() {
     }),
   );
 
-  const playingState: PlayingState = {
-    isPaused: true,
-  };
-
-  const publishCH = await conn.createConfirmChannel();
-
   await subscribeMsgPack(
     conn,
     ExchangePerilTopic,
@@ -46,12 +39,19 @@ async function main() {
     SimpleQueueType.Durable,
     handlerLog(),
   );
+  const playingState: PlayingState = {
+    isPaused: true,
+  };
 
-  try {
-    await publishJSON(publishCH, ExchangePerilDirect, PauseKey, playingState);
-  } catch (err) {
-    console.error("Error publishing message:", err);
+  const publishCH = await conn.createConfirmChannel();
+
+  // Used to run the server from a non-interactive source, like the multiserver.sh file
+  if (!process.stdin.isTTY) {
+    console.log("Non-interactive mode: skipping command input.");
+    return;
   }
+
+  printServerHelp();
 
   let run = true;
   while (run) {
